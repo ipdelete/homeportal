@@ -1,4 +1,4 @@
-name: Build & Publish Docker image
+name: Build & Publish Docker images
 
 on:
   push:
@@ -12,6 +12,17 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - component: portal
+            image: ghcr.io/ipdelete/homeportal
+            context: src/portal
+            dockerfile: Dockerfile
+          - component: demigod
+            image: ghcr.io/ipdelete/demigod
+            context: .
+            dockerfile: src/demigod/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +37,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ matrix.image }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
@@ -34,7 +45,8 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

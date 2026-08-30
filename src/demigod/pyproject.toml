@@ -1,0 +1,9 @@
+[project]
+name = "demigod"
+version = "0.1.0"
+description = "GitHub webhook listener that rolls out new homeportal images"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.uv]
+package = false

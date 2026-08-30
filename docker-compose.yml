@@ -1,9 +1,30 @@
+name: homeportal
+
 services:
   portal:
-    build: .
-    image: homeportal
+    # built from src/portal/Dockerfile and published by CI
+    # local dev: docker build -t ghcr.io/ipdelete/homeportal:latest src/portal
+    image: ghcr.io/ipdelete/homeportal:latest
     container_name: homeportal
     network_mode: host
     volumes:
       - /var/run/tailscale:/var/run/tailscale:ro
+    restart: unless-stopped
+
+  demigod:
+    # built from src/demigod/Dockerfile and published by CI
+    # local dev: docker build -t ghcr.io/ipdelete/demigod:latest -f src/demigod/Dockerfile .
+    image: ghcr.io/ipdelete/demigod:latest
+    container_name: demigod
+    network_mode: host
+    volumes:
+      - /var/run/tailscale:/var/run/tailscale:ro
+      # lets demigod drive the host daemon; this is the "pull and run" channel
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # from .env next to this file (gitignored); forwarded to the webhook
+      # listener and back into compose interpolation for inner deploys
+      - DEMIGOD_WEBHOOK_SECRET=${DEMIGOD_WEBHOOK_SECRET:?add it to .env}
+      # the baked compose file in the image
+      - DEMIGOD_COMPOSE_DIR=/app
     restart: unless-stopped
