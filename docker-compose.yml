@@ -1,0 +1,9 @@
+services:
+  portal:
+    build: .
+    image: homeportal
+    container_name: homeportal
+    network_mode: host
+    volumes:
+      - /var/run/tailscale:/var/run/tailscale:ro
+    restart: unless-stopped
