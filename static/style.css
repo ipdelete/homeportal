@@ -1,0 +1,53 @@
+body {
+  font-family: system-ui, sans-serif;
+  background: #fafafa;
+  color: #222;
+  margin: 0;
+}
+
+main {
+  max-width: 640px;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
+
+h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.muted {
+  color: #777;
+  font-size: 0.85rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  font-weight: 600;
+  border-bottom: 1px solid #ccc;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.online .dot { background: #2e9e44; }
+.offline .dot { background: #ccc; }
+
+.offline .name { color: #999; }
