@@ -5,6 +5,9 @@ Serves static files from ./static and a single API endpoint:
   GET /api/devices -> JSON list of tailnet devices (name + status)
 
 Uses the local `tailscale` CLI, so run this on a machine in your tailnet.
+
+Deployed by demigod: pushes to main build this image, publish it to GHCR,
+and a webhook rolls the container forward automatically.
 """
 
 import json
