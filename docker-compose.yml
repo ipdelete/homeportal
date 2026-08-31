@@ -6,12 +6,12 @@ services:
     # local dev: docker build -t ghcr.io/ipdelete/homeportal:latest src/portal
     image: ghcr.io/ipdelete/homeportal:latest
     container_name: homeportal
-    network_mode: host
+    ports:
+      - "8080:8080"
     volumes:
-      - /var/run/tailscale:/var/run/tailscale:ro
-    environment:
-      # interpolated from demigod's env (origin: .env on the host)
-      - SERVICES_JSON=${SERVICES_JSON:-[]}
+      # tailscaled socket (brew daemon) mounted at the path the tailscale CLI
+      # expects inside the container; works on macOS Docker Desktop and Linux
+      - /var/run/tailscaled.socket:/var/run/tailscale/tailscaled.sock:ro
     restart: unless-stopped
 
   demigod:
@@ -19,9 +19,11 @@ services:
     # local dev: docker build -t ghcr.io/ipdelete/demigod:latest -f src/demigod/Dockerfile .
     image: ghcr.io/ipdelete/demigod:latest
     container_name: demigod
-    network_mode: host
+    ports:
+      # loopback only: the funnel forwards to the host's 8090
+      - "127.0.0.1:8090:8090"
     volumes:
-      - /var/run/tailscale:/var/run/tailscale:ro
+      - /var/run/tailscaled.socket:/var/run/tailscale/tailscaled.sock:ro
       # lets demigod drive the host daemon; this is the "pull and run" channel
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -32,4 +34,6 @@ services:
       - SERVICES_JSON=${SERVICES_JSON:-}
       # the baked compose file in the image
       - DEMIGOD_COMPOSE_DIR=/app
+    # the funnel is configured natively on the host; container only listens
+    command: python3 demigod.py --no-funnel
     restart: unless-stopped
