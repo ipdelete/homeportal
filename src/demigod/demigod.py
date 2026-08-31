@@ -54,8 +54,20 @@ def load_secret() -> bytes:
 
 
 def setup_funnel(port: int):
-    """Publish the listener via Tailscale Funnel."""
+    """Publish the listener via Tailscale Funnel, only if not already configured.
+
+    Re-running `funnel --bg` on every start makes the control plane mint new
+    funnel-ingress-node peers that linger forever; keep this idempotent.
+    """
     try:
+        status = subprocess.run(
+            ["tailscale", "funnel", "status"],
+            capture_output=True,
+            text=True,
+        ).stdout
+        if f"http://localhost:{port}" in status:
+            log(f"funnel already configured for port {port}; skipping")
+            return
         subprocess.run(
             ["tailscale", "funnel", "--bg", f"localhost:{port}"],
             check=True,
