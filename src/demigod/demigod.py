@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-# where the compose project lives. Host/uv dev mode: repo root. In the
+# where the compose project lives. Host dev mode: repo root. In the
 # container: /app, where a baked copy of docker-compose.yml ships in the image.
 COMPOSE_DIR = Path(
     os.environ.get("DEMIGOD_COMPOSE_DIR")
@@ -30,6 +30,8 @@ PACKAGE = "homeportal"
 SECRET_FILE = Path.home() / ".config" / "demigod" / "webhook-secret"
 
 deploy_lock = threading.Lock()
+SECRET = b""
+DRY_RUN = False
 
 
 def log(*parts):
@@ -52,7 +54,7 @@ def load_secret() -> bytes:
 
 
 def setup_funnel(port: int):
-    """Publish the listener via Tailscale Funnel; returns the public URL or None."""
+    """Publish the listener via Tailscale Funnel."""
     try:
         subprocess.run(
             ["tailscale", "funnel", "--bg", f"localhost:{port}"],
@@ -62,14 +64,13 @@ def setup_funnel(port: int):
         )
     except FileNotFoundError:
         log("tailscale CLI not found; skipping funnel setup")
-        return None
+        return
     except subprocess.CalledProcessError as e:
         log("funnel setup failed:")
         log(e.stderr.strip())
         log("(run `tailscale funnel` once interactively to enable HTTPS certs)")
-        return None
+        return
 
-    url = None
     try:
         status = json.loads(
             subprocess.run(
@@ -81,13 +82,9 @@ def setup_funnel(port: int):
         )
         dns = (status.get("Self", {}).get("DNSName") or "").rstrip(".")
         if dns:
-            url = f"https://{dns}/webhook"
+            log(f"funnel live: POST https://{dns}/webhook")
     except Exception as e:
         log(f"could not read funnel URL: {e}")
-
-    if url:
-        log(f"funnel live: POST {url}")
-    return url
 
 
 def deploy(dry_run: bool):
@@ -121,61 +118,57 @@ def deploy(dry_run: bool):
         deploy_lock.release()
 
 
-def make_handler(secret: bytes, dry_run: bool):
-    class Handler(BaseHTTPRequestHandler):
-        def _json(self, code, payload):
-            body = json.dumps(payload).encode()
-            self.send_response(code)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
+class Handler(BaseHTTPRequestHandler):
+    def _json(self, code, payload):
+        body = json.dumps(payload).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
-        def do_GET(self):
-            if self.path == "/healthz":
-                self._json(200, {"ok": True})
-            else:
-                self._json(404, {"error": "not found"})
+    def do_GET(self):
+        if self.path == "/healthz":
+            self._json(200, {"ok": True})
+        else:
+            self._json(404, {"error": "not found"})
 
-        def do_POST(self):
-            length = int(self.headers.get("Content-Length") or 0)
-            body = self.rfile.read(length)
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length") or 0)
+        body = self.rfile.read(length)
 
-            expected = (
-                "sha256="
-                + hmac.new(secret, body, hashlib.sha256).hexdigest()
-            )
-            actual = self.headers.get("X-Hub-Signature-256", "")
-            if not hmac.compare_digest(actual, expected):
-                log("rejected: bad signature from", self.client_address[0])
-                self._json(403, {"error": "bad signature"})
-                return
+        expected = (
+            "sha256=" + hmac.new(SECRET, body, hashlib.sha256).hexdigest()
+        )
+        actual = self.headers.get("X-Hub-Signature-256", "")
+        if not hmac.compare_digest(actual, expected):
+            log("rejected: bad signature from", self.client_address[0])
+            self._json(403, {"error": "bad signature"})
+            return
 
-            event = self.headers.get("X-GitHub-Event", "")
-            try:
-                payload = json.loads(body) if body else {}
-            except json.JSONDecodeError:
-                self._json(400, {"error": "invalid JSON"})
-                return
+        event = self.headers.get("X-GitHub-Event", "")
+        try:
+            payload = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            self._json(400, {"error": "invalid JSON"})
+            return
 
-            if event == "ping":
-                self._json(200, {"ok": True, "event": "ping"})
-                return
+        if event == "ping":
+            self._json(200, {"ok": True, "event": "ping"})
+            return
 
-            name = payload.get("package", {}).get("name", "")
-            action = payload.get("action", "")
-            if event != "package" or name != PACKAGE or action != "published":
-                log(f"ignored: event={event} package={name} action={action}")
-                self._json(200, {"ignored": True})
-                return
+        name = payload.get("package", {}).get("name", "")
+        action = payload.get("action", "")
+        if event != "package" or name != PACKAGE or action != "published":
+            log(f"ignored: event={event} package={name} action={action}")
+            self._json(200, {"ignored": True})
+            return
 
-            threading.Thread(target=deploy, args=(dry_run,), daemon=True).start()
-            self._json(202, {"deploying": True})
+        threading.Thread(target=deploy, args=(DRY_RUN,), daemon=True).start()
+        self._json(202, {"deploying": True})
 
-        def log_message(self, fmt, *args):
-            pass
-
-    return Handler
+    def log_message(self, fmt, *args):
+        pass
 
 
 def main():
@@ -196,8 +189,10 @@ def main():
     )
     args = parser.parse_args()
 
-    secret = load_secret()
-    log(f"secret loaded ({len(secret)} bytes)")
+    global SECRET, DRY_RUN
+    SECRET = load_secret()
+    DRY_RUN = args.dry_run
+    log(f"secret loaded ({len(SECRET)} bytes)")
 
     if not args.no_funnel:
         setup_funnel(args.port)
@@ -205,7 +200,7 @@ def main():
     if args.dry_run:
         log("dry-run mode: deploy steps will only be logged")
 
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(secret, args.dry_run))
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     log(f"listening on 127.0.0.1:{args.port}")
     server.serve_forever()
 

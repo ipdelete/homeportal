@@ -17,6 +17,11 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
 STATIC_DIR = Path(__file__).parent / "static"
+SERVICES_FILE = Path(__file__).parent / "services.json"
+
+
+def get_services():
+    return json.loads(SERVICES_FILE.read_text())
 
 
 def get_devices():
@@ -34,6 +39,9 @@ def get_devices():
 
     devices = []
     for p in peers:
+        # funnel relay peers have no DNS name or OS; not real devices
+        if not p.get("DNSName") and not p.get("OS"):
+            continue
         devices.append(
             {
                 "dns": (p.get("DNSName") or "").rstrip("."),
@@ -51,8 +59,11 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
 
     def do_GET(self):
-        if self.path.split("?")[0] == "/api/devices":
+        route = self.path.split("?")[0]
+        if route == "/api/devices":
             self._send_json(200, {"devices": get_devices()})
+        elif route == "/api/services":
+            self._send_json(200, {"services": get_services()})
         else:
             super().do_GET()
 

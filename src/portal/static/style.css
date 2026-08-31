@@ -5,15 +5,58 @@ body {
   margin: 0;
 }
 
-main {
-  max-width: 640px;
-  margin: 3rem auto;
-  padding: 0 1rem;
+.layout {
+  display: flex;
+  min-height: 100vh;
 }
 
-h1 {
-  font-size: 1.4rem;
+aside {
+  width: 180px;
+  flex-shrink: 0;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid #ddd;
+}
+
+aside h1 {
+  font-size: 1.1rem;
   font-weight: 600;
+  margin: 0 0 1rem 0.6rem;
+}
+
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+nav a {
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  color: #222;
+  text-decoration: none;
+}
+
+nav a:hover {
+  background: #f0f0f0;
+}
+
+nav a.active {
+  background: #e8e8e8;
+  font-weight: 600;
+}
+
+main {
+  flex: 1;
+  max-width: 720px;
+  padding: 1.5rem 2rem;
+}
+
+main section {
+  display: none;
+}
+
+main section.active {
+  display: block;
 }
 
 .muted {
@@ -51,3 +94,30 @@ th {
 .offline .dot { background: #ccc; }
 
 .offline .name { color: #999; }
+
+#service-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+#service-list li {
+  border-bottom: 1px solid #eee;
+}
+
+#service-list li:last-child {
+  border-bottom: none;
+}
+
+#service-list a {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  color: #222;
+  text-decoration: none;
+}
+
+#service-list a:hover {
+  background: #f0f0f0;
+}

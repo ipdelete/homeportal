@@ -7,19 +7,36 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <main>
-    <h1>Home Portal</h1>
-    <p id="updated" class="muted"></p>
-    <table>
-      <thead>
-        <tr>
-          <th>DNS Name</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="devices"></tbody>
-    </table>
-  </main>
+  <div class="layout">
+    <aside>
+      <h1>Home Portal</h1>
+      <nav>
+        <a href="#tailnet">Tailnet</a>
+        <a href="#network">Network</a>
+        <a href="#services">Services</a>
+      </nav>
+    </aside>
+    <main>
+      <section id="tailnet">
+        <p id="updated" class="muted"></p>
+        <table>
+          <thead>
+            <tr>
+              <th>DNS Name</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="devices"></tbody>
+        </table>
+      </section>
+      <section id="network">
+        <p class="muted">Nothing here yet.</p>
+      </section>
+      <section id="services">
+        <ul id="service-list"></ul>
+      </section>
+    </main>
+  </div>
   <script src="/app.js"></script>
 </body>
 </html>
