@@ -5,7 +5,6 @@ COPY --from=tailscale/tailscale:latest /usr/local/bin/tailscale /usr/local/bin/t
 
 WORKDIR /app
 COPY server.py .
-COPY services.json .
 COPY static/ static/
 
 EXPOSE 8080

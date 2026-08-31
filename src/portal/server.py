@@ -11,6 +11,7 @@ and a webhook rolls the container forward automatically.
 """
 
 import json
+import os
 import subprocess
 import sys
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -21,7 +22,14 @@ SERVICES_FILE = Path(__file__).parent / "services.json"
 
 
 def get_services():
-    return json.loads(SERVICES_FILE.read_text())
+    # real list travels via SERVICES_JSON env (kept out of the public repo);
+    # file fallback for local dev
+    raw = os.environ.get("SERVICES_JSON")
+    if raw:
+        return json.loads(raw)
+    if SERVICES_FILE.is_file():
+        return json.loads(SERVICES_FILE.read_text())
+    return []
 
 
 def get_devices():

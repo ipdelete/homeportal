@@ -9,6 +9,9 @@ services:
     network_mode: host
     volumes:
       - /var/run/tailscale:/var/run/tailscale:ro
+    environment:
+      # interpolated from demigod's env (origin: .env on the host)
+      - SERVICES_JSON=${SERVICES_JSON:-[]}
     restart: unless-stopped
 
   demigod:
@@ -25,6 +28,8 @@ services:
       # from .env next to this file (gitignored); forwarded to the webhook
       # listener and back into compose interpolation for inner deploys
       - DEMIGOD_WEBHOOK_SECRET=${DEMIGOD_WEBHOOK_SECRET:?add it to .env}
+      # real service list lives in .env, not the public repo
+      - SERVICES_JSON=${SERVICES_JSON:-}
       # the baked compose file in the image
       - DEMIGOD_COMPOSE_DIR=/app
     restart: unless-stopped
