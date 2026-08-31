@@ -12,6 +12,9 @@ services:
       # tailscaled socket (brew daemon) mounted at the path the tailscale CLI
       # expects inside the container; works on macOS Docker Desktop and Linux
       - /var/run/tailscaled.socket:/var/run/tailscale/tailscaled.sock:ro
+    environment:
+      # interpolated from .env next to this file (gitignored)
+      - SERVICES_JSON=${SERVICES_JSON:-[]}
     restart: unless-stopped
 
   demigod:
