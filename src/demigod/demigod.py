@@ -212,8 +212,10 @@ def main():
     if args.dry_run:
         log("dry-run mode: deploy steps will only be logged")
 
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
-    log(f"listening on 127.0.0.1:{args.port}")
+    # bind all interfaces inside the container; host exposure is limited by
+    # the compose port mapping (loopback only)
+    server = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
+    log(f"listening on 0.0.0.0:{args.port}")
     server.serve_forever()
 
 
